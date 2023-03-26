@@ -63,7 +63,7 @@ func parseArgs(args []string) (config, error) {
 	numTimes := 0
 	var err error
 	c := config{}
-	if len(args) < 1 {
+	if len(args) > 1 {
 		return c, errors.New("invalid number of arguments")
 	}
 
