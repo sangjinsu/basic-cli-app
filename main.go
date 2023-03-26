@@ -3,45 +3,36 @@ package main
 import (
 	"bufio"
 	"errors"
+	"flag"
 	"fmt"
 	"io"
 	"os"
-	"strconv"
 )
-
-var usageString = fmt.Sprintf(`Usage: %s <integer> [-h|--help]
-	A greeter application which prints the name you entered <integer> number of times.
-`, os.Args[0])
 
 func main() {
 	reader := bufio.NewReader(os.Stdin)
+	writer := bufio.NewWriter(os.Stdout)
 
-	c, err := parseArgs(os.Args[1:])
+	c, err := parseArgs(writer, os.Args[1:])
 	if err != nil {
 		fmt.Println(err)
-		printUsage()
 		os.Exit(1)
 	}
-	err = validateArgs(c)
-	if err != nil {
+
+	if err = validateArgs(c); err != nil {
 		fmt.Println(err)
-		printUsage()
 		os.Exit(1)
 	}
-	err = runCmd(reader, c)
-	if err != nil {
+
+	if err = runCmd(reader, c); err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
 }
 
 type config struct {
-	numTimes   int
-	printUsage bool
-}
-
-func printUsage() {
-	fmt.Println(usageString)
+	numTimes int
+	name     string
 }
 
 func getName(r io.Reader) (string, error) {
@@ -59,51 +50,54 @@ func getName(r io.Reader) (string, error) {
 	return name, nil
 }
 
-func parseArgs(args []string) (config, error) {
-	numTimes := 0
-	var err error
+func parseArgs(writer *bufio.Writer, args []string) (config, error) {
 	c := config{}
-	if len(args) > 1 {
-		return c, errors.New("invalid number of arguments")
-	}
+	fs := flag.NewFlagSet("greeter", flag.ContinueOnError)
+	fs.SetOutput(writer)
+	fs.IntVar(&c.numTimes, "n", 0, "Number of times to greet")
+	fs.Usage = func() {
+		usageString := `
+A greeter application which prints the name you entered a specified number of times.
 
-	if args[0] == "-h" || args[0] == "-help" {
-		c.printUsage = true
-		return c, nil
+Usage of %s: <option> [name]`
+		fmt.Fprintf(os.Stderr, usageString+"\n", fs.Name())
+		fmt.Fprintf(os.Stderr, "Options:\n")
+		fs.PrintDefaults()
 	}
-
-	numTimes, err = strconv.Atoi(args[0])
+	err := fs.Parse(args)
 	if err != nil {
 		return c, err
 	}
-	c.numTimes = numTimes
-
+	if fs.NArg() > 1 {
+		return c, errors.New("잘못된 위치 인수입니다")
+	}
+	if fs.NArg() == 1 {
+		c.name = fs.Arg(0)
+	}
 	return c, nil
 }
 
 func validateArgs(c config) error {
 	if c.numTimes <= 0 {
-		return errors.New("1개 이상의 숫자가 필요합니다")
+		return errors.New("1 이상의 숫자가 필요합니다")
 	}
 	return nil
 }
 
 func runCmd(r io.Reader, c config) error {
-	if c.printUsage {
-		printUsage()
-		return nil
+	if len(c.name) == 0 {
+		var err error
+		c.name, err = getName(r)
+		if err != nil {
+			return fmt.Errorf("이름을 가져오는 중에 오류가 발생했습니다: %w", err)
+		}
 	}
-	name, err := getName(r)
-	if err != nil {
-		return err
-	}
-
-	greetUser(c, name)
+	greetUser(c)
 	return nil
 }
 
-func greetUser(c config, name string) {
-	msg := fmt.Sprintf("Nice to meet you %s", name)
+func greetUser(c config) {
+	msg := fmt.Sprintf("만나서 반갑습니다 %s", c.name)
 	for i := 0; i < c.numTimes; i++ {
 		fmt.Println(msg)
 	}
