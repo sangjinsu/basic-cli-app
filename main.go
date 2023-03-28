@@ -15,7 +15,9 @@ func main() {
 
 	c, err := parseArgs(writer, os.Args[1:])
 	if err != nil {
-		fmt.Println(err)
+		if err != flag.ErrHelp {
+			fmt.Println(err)
+		}
 		os.Exit(1)
 	}
 
@@ -62,6 +64,8 @@ A greeter application which prints the name you entered a specified number of ti
 Usage of %s: <option> [name]`
 		fmt.Fprintf(os.Stderr, usageString+"\n", fs.Name())
 		fmt.Fprintf(os.Stderr, "Options:\n")
+		fmt.Fprintf(os.Stderr, "-n int\n")
+		fmt.Fprintf(os.Stderr, "\tNumber of times to greet\n")
 		fs.PrintDefaults()
 	}
 	err := fs.Parse(args)

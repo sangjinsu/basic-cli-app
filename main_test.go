@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
 	"os"
 	"reflect"
@@ -16,7 +17,8 @@ func TestMain(m *testing.M) {
 
 func Test_parseArgs(t *testing.T) {
 	type args struct {
-		args []string
+		writer *bufio.Writer
+		args   []string
 	}
 	tests := []struct {
 		name    string
@@ -28,47 +30,51 @@ func Test_parseArgs(t *testing.T) {
 		{
 			name: "help",
 			args: args{
-				[]string{"-h"},
+				writer: bufio.NewWriter(os.Stdin),
+				args:   []string{"-h"},
 			},
 			want: config{
-				printUsage: true, numTimes: 0,
+				numTimes: 0,
 			},
-			wantErr: false,
+			wantErr: true,
 		},
 		{
 			name: "normal case",
 			args: args{
-				[]string{"10"},
+				writer: bufio.NewWriter(os.Stdin),
+				args:   []string{"-n", "10"},
 			},
 			want: config{
-				printUsage: false, numTimes: 10,
+				numTimes: 10,
 			},
 			wantErr: false,
 		},
 		{
 			name: "not number",
 			args: args{
-				[]string{"abc"},
+				writer: bufio.NewWriter(os.Stdin),
+				args:   []string{"-n", "abc"},
 			},
 			want: config{
-				printUsage: false, numTimes: 0,
+				numTimes: 0,
 			},
 			wantErr: true,
 		},
 		{
 			name: "invalid argument",
 			args: args{
-				[]string{"1", "invalid argument"},
+				writer: bufio.NewWriter(os.Stdin),
+				args:   []string{"-n", "1", "invalid", "argument"},
 			},
 			want: config{
-				printUsage: false, numTimes: 0,
+				numTimes: 1,
 			},
 			wantErr: true,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := parseArgs(tt.args.args)
+			got, err := parseArgs(tt.args.writer, tt.args.args)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("parseArgs() error = %v, wantErr %v", err, tt.wantErr)
 				return
